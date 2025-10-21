@@ -150,7 +150,6 @@ def main() -> None:
         # Регистрация обработчиков команд
         dp.register_message_handler(handlers.send_welcome, commands=["start", "help"])
         dp.register_message_handler(handlers.send_stats, commands=["stats"])
-        )
         dp.register_message_handler(
             lambda message: handlers.handle_photo(
                 message, bot, vk, white_list, temp_dir
