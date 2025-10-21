@@ -56,13 +56,13 @@ jobs:
             fi
             
             # Остановка и удаление старых контейнеров
-            COMPOSE_PROFILES=${{ env.COMPOSE_PROFILE }} docker compose down
+            COMPOSE_PROFILES=${{ env.COMPOSE_PROFILE }} docker compose -f docker/docker-compose.yml down
             
             # Пересборка образов
-            COMPOSE_PROFILES=${{ env.COMPOSE_PROFILE }} docker compose build --no-cache
+            COMPOSE_PROFILES=${{ env.COMPOSE_PROFILE }} docker compose -f docker/docker-compose.yml build --no-cache
             
             # Запуск новых контейнеров
-            COMPOSE_PROFILES=${{ env.COMPOSE_PROFILE }} docker compose up -d
+            COMPOSE_PROFILES=${{ env.COMPOSE_PROFILE }} docker compose -f docker/docker-compose.yml up -d
             
             # Очистка неиспользуемых образов
             docker image prune -f
