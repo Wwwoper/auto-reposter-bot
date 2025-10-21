@@ -29,4 +29,4 @@ ENV V=${V}
 STOPSIGNAL SIGTERM
 
 # ВАЖНО: Использовать exec форму и unbuffered режим
-CMD ["python", "-u", "-m","src.main.py"]
+CMD ["python", "-u", "-m", "src.main"]
