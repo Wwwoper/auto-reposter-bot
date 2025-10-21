@@ -9,19 +9,16 @@ services:
     profiles: ["prod"]
     restart: unless-stopped
     env_file:
-      - ../.env
-
+      - ../.env.prod
     volumes:
-      - ../data/logs:/app/data/logs
-      - ../data/temp_photos:/app/data/temp_photos
-      - ../.env:/app/.env:ro
-
+      - ../data/logs-prod:/app/data/logs
+      - ../data/temp_photos-prod:/app/data/temp_photos
+      - ../.env.prod:/app/.env:ro
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
-
     networks:
       - bot-network
 
@@ -33,26 +30,22 @@ services:
     profiles: ["test"]
     restart: unless-stopped
     env_file:
-      - ../.env
-
+      - ../.env.dev
     volumes:
-      - ../data/logs:/app/data/logs
-      - ../data/temp_photos:/app/data/temp_photos
-      - ../.env:/app/.env:ro
-
+      - ../data/logs-dev:/app/data/logs
+      - ../data/temp_photos-dev:/app/data/temp_photos
+      - ../.env.dev:/app/.env:ro
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
- 
     healthcheck:
       test: ["CMD", "python", "-c", "import os; exit(0 if os.path.exists('data/logs/bot.log') else 1)"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 5s
-
     networks:
       - bot-network
 

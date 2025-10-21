@@ -1,4 +1,6 @@
 .env
+.env.prod
+.env.dev
 .env.*
 !.env.example
 __pycache__/
