@@ -1,0 +1,85 @@
+name: Deploy Application
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set environment variables
+        id: env
+        run: |
+          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "COMPOSE_PROFILE=prod" >> $GITHUB_ENV
+            echo "BRANCH_NAME=main" >> $GITHUB_ENV
+            echo "ENV_FILE=.env.prod" >> $GITHUB_ENV
+          else
+            echo "COMPOSE_PROFILE=test" >> $GITHUB_ENV
+            echo "BRANCH_NAME=develop" >> $GITHUB_ENV
+            echo "ENV_FILE=.env.dev" >> $GITHUB_ENV
+          fi
+
+      - name: Install SSH key
+        run: |
+          mkdir -p ~/.ssh/
+          install -m 600 -D /dev/null ~/.ssh/id_ed25519
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Deploy to server
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          WORK_DIR: ${{ secrets.WORK_DIR }}
+        run: |
+          ssh -p $SSH_PORT $SSH_USER@$SSH_HOST << EOF
+            set -e
+            cd $WORK_DIR
+
+            # Обновление кода из нужной ветки
+            git fetch origin
+            git checkout $BRANCH_NAME
+            git pull origin $BRANCH_NAME
+
+            # Проверка существования нужного .env файла
+            if [ ! -f "$ENV_FILE" ]; then
+              echo "Error: $ENV_FILE file not found!"
+              exit 1
+            fi
+
+            # Остановка и удаление старых контейнеров с указанием compose файла
+            COMPOSE_PROFILES=$COMPOSE_PROFILE docker compose -f docker/docker-compose.yml down
+
+            # Пересборка образов
+            COMPOSE_PROFILES=$COMPOSE_PROFILE docker compose -f docker/docker-compose.yml build --no-cache
+
+            # Запуск новых контейнеров
+            COMPOSE_PROFILES=$COMPOSE_PROFILE docker compose -f docker/docker-compose.yml up -d
+
+            # Очистка неиспользуемых образов
+            docker image prune -f
+
+            echo "Deployment completed for $BRANCH_NAME branch"
+            echo "Using environment file: $ENV_FILE"
+            echo "Profile: $COMPOSE_PROFILE"
+          EOF
+
+      - name: Verify deployment
+        run: |
+          ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+          "docker ps --filter 'name=reposter-bot-${{ env.COMPOSE_PROFILE }}' --format 'table {{.Names}}\t{{.Status}}'"
+
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -rf ~/.ssh

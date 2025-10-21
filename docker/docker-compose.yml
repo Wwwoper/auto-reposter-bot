@@ -1,1 +1,52 @@
+services:
+  reposter-bot-prod:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: reposter-bot-prod
+    profiles: ["prod"]
+    restart: unless-stopped
+    env_file:
+      - ../.env.prod
+    volumes:
+      - ../data/logs-prod:/app/data/logs
+      - ../data/temp_photos-prod:/app/data/temp_photos
+      - ../.env.prod:/app/.env:ro
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - bot-network
 
+  reposter-bot-test:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: reposter-bot-test
+    profiles: ["test"]
+    restart: unless-stopped
+    env_file:
+      - ../.env.dev
+    volumes:
+      - ../data/logs-dev:/app/data/logs
+      - ../data/temp_photos-dev:/app/data/temp_photos
+      - ../.env.dev:/app/.env:ro
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os; exit(0 if os.path.exists('data/logs/bot.log') else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    networks:
+      - bot-network
+
+networks:
+  bot-network:
+    driver: bridge
